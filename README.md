@@ -14,7 +14,7 @@ Then visit <http://localhost:8000>.
 
 ## Prototype status
 
-This is an interactive front-end prototype. Feed entries, prices, and illustrations are sample data. Search, category filters, marketplace filters, profit threshold, sorting, saved finds, detail views, and source links work locally. It does not retrieve live listings, buy items, or publish resale listings.
+This is an interactive front-end prototype. Feed entries, prices, and illustrations are sample data. Search, category filters, marketplace filters, profit threshold, sorting, saved finds, detail views, source links, and the agent-wallet autopilot switch work locally. Autopilot rules can be adjusted for per-item spend, daily spend, minimum profit, and minimum return. The switch only highlights demo finds that match those rules; it does not retrieve live listings, connect a wallet, buy items, pay for APIs, or publish resale listings.
 
 The production app will need approved marketplace data and seller connections. eBay has APIs for inventory and publishing seller listings. Meta Marketplace's Product Item API is for eligible partners. Pay.sh can provide user-approved access to paid APIs, but it does not itself grant marketplace access or buy and relist goods.
 
