@@ -30,3 +30,34 @@ document.querySelectorAll('.category').forEach(b=>b.addEventListener('click',()=
 document.querySelectorAll('.top-link').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.top-link').forEach(x=>x.classList.remove('active'));b.classList.add('active');feed=b.dataset.feed;if(feed==='Saved'){document.querySelector('#feed-title').textContent='Your saved finds';document.querySelector('#feed-subtitle').textContent='A shortlist for your next sourcing run'}else if(feed==='Following'){document.querySelector('#feed-title').textContent='Curated for you';document.querySelector('#feed-subtitle').textContent='Followed styles and sellers will show up here'}else{document.querySelector('#feed-title').textContent='Picked for your eye';document.querySelector('#feed-subtitle').textContent='Sorted by resale opportunity'}render()}));
 document.querySelector('#filters').onclick=()=>{const el=document.querySelector('.filter-rail');el.classList.toggle('open');if(innerWidth>620)notify('Filters are in the left panel')};document.querySelector('#reset-filters').onclick=()=>{document.querySelectorAll('.source-filter').forEach(x=>x.checked=true);document.querySelector('#min-profit').value=0;document.querySelector('#profit-label').textContent='$0';document.querySelectorAll('.category').forEach(x=>x.classList.remove('active'));document.querySelector('.category').classList.add('active');category='All finds';render();notify('Filters reset')};
 document.querySelector('#scan-now').onclick=()=>notify('Demo feed refreshed. Live marketplace search needs connected data sources.');document.querySelector('#item-dialog').addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.close()});document.querySelectorAll('.mobile-nav button').forEach((b,i)=>b.onclick=()=>{document.querySelectorAll('.mobile-nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');if(i===2){document.querySelector('[data-feed="Saved"]').click();window.scrollTo({top:0,behavior:'smooth'})}else if(i===1){document.querySelector('#search').focus();window.scrollTo({top:0,behavior:'smooth'})}else if(i===0){document.querySelector('[data-feed="For you"]').click();window.scrollTo({top:0,behavior:'smooth'})}else notify('Your profile')});
+
+// Agent-wallet autopilot is a local preview control. It never submits a payment.
+let autoRules={maxItem:60,dailyBudget:150,minNet:25,minReturn:40};
+try{autoRules={...autoRules,...JSON.parse(localStorage.getItem('secondhand-auto-rules')||'{}')};}catch{}
+let autopilot=localStorage.getItem('secondhand-autopilot')==='on';
+const autopilotSwitch=document.querySelector('#autopilot-switch');
+const walletControl=document.querySelector('.wallet-control');
+const walletStatus=document.querySelector('#wallet-status');
+const baseRender=render;
+function isEligible(d){const committed=[...queued].reduce((sum,id)=>sum+(items.find(item=>item.id===id)?.buy||0),0);return d.buy<=autoRules.maxItem&&committed+(queued.has(d.id)?0:d.buy)<=autoRules.dailyBudget&&d.net>=autoRules.minNet&&(d.net/d.buy*100)>=autoRules.minReturn;}
+function syncAutopilot(){
+  autopilotSwitch.setAttribute('aria-checked',String(autopilot));
+  walletControl.classList.toggle('on',autopilot);
+  walletStatus.textContent=autopilot?`Demo on · max ${money(autoRules.maxItem)}`:'Autopilot off';
+}
+render=function(){baseRender();if(autopilot){grid.querySelectorAll('[data-open]').forEach(button=>{const d=items.find(item=>item.id===Number(button.dataset.open));if(d&&isEligible(d)){const badge=document.createElement('span');badge.className='autopilot-match';badge.textContent='Fits your rules';button.closest('.product-card').querySelector('.product-photo').append(badge);}})}};
+function showWalletRules(){
+  const dialog=document.querySelector('#item-dialog');
+  dialog.classList.add('modal-settings');
+  document.querySelector('#modal-content').innerHTML=`<button class="modal-close" aria-label="Close">×</button><div class="settings-kicker">AUTONOMOUS RESALE · PREVIEW</div><h3 class="settings-title">Agent wallet rules</h3><p class="settings-copy">Set the guardrails your agent should follow when it searches and prepares a resale. These controls are a demo; there is no wallet connected.</p><div class="wallet-status-card"><span class="wallet-status-icon">◈</span><div><strong>Wallet not connected</strong><small>No funds or marketplace accounts are linked</small></div><span class="demo-chip">DEMO</span></div><label class="limit-field"><span>Max buy price per item <b>$</b></span><input id="rule-max-item" type="number" min="1" max="10000" step="1" value="${autoRules.maxItem}" /></label><label class="limit-field"><span>Daily spend cap <b>$</b></span><input id="rule-daily" type="number" min="1" max="100000" step="1" value="${autoRules.dailyBudget}" /></label><label class="limit-field"><span>Minimum estimated net profit <b>$</b></span><input id="rule-min-net" type="number" min="0" max="10000" step="1" value="${autoRules.minNet}" /></label><label class="limit-field"><span>Minimum estimated return <b>%</b></span><input id="rule-min-return" type="number" min="0" max="1000" step="5" value="${autoRules.minReturn}" /></label><div class="settings-disclaimer">The switch only highlights matching demo finds. It does not connect a wallet, purchase items, pay for API calls, or publish listings.</div><div class="modal-actions"><button class="modal-primary" id="save-wallet-rules">Save rules</button></div>`;
+  dialog.showModal();document.querySelector('.modal-close').onclick=()=>dialog.close();document.querySelector('#save-wallet-rules').onclick=()=>{
+    const val=id=>Math.max(0,Number(document.querySelector(id).value)||0);
+    autoRules={maxItem:val('#rule-max-item'),dailyBudget:val('#rule-daily'),minNet:val('#rule-min-net'),minReturn:val('#rule-min-return')};
+    localStorage.setItem('secondhand-auto-rules',JSON.stringify(autoRules));syncAutopilot();dialog.close();render();notify('Autopilot rules saved for this preview');
+  };
+}
+const baseShowItem=showItem;
+showItem=function(id){baseShowItem(id);document.querySelector('#item-dialog').classList.remove('modal-settings');const d=items.find(item=>item.id===id);const queueButton=document.querySelector('#queue-item');if(autopilot&&isEligible(d)){queueButton.textContent='Stage for agent';queueButton.onclick=()=>{queued.add(d.id);document.querySelector('#item-dialog').close();notify('Staged in demo. No wallet is connected and no order was placed.')}}};
+autopilotSwitch.addEventListener('click',()=>{autopilot=!autopilot;localStorage.setItem('secondhand-autopilot',autopilot?'on':'off');syncAutopilot();render();notify(autopilot?'Demo autopilot is on. No wallet is connected.':'Demo autopilot is off.')});
+document.querySelector('#wallet-rules').addEventListener('click',showWalletRules);
+syncAutopilot();render();
